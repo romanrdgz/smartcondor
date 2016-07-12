@@ -18,11 +18,12 @@ class IB_API(Thread):
     operations
     '''
 
-    def __init__(self, port=4001, client_id=0):
+    def __init__(self, event, port=4001, client_id=0):
         '''
         Connection to the IB API
         '''
         super(IB_API, self).__init__()
+        self.event = event
         # Create logger
         logging.basicConfig(
             level=logging.INFO, filename='ib_conn.log',
@@ -38,7 +39,7 @@ class IB_API(Thread):
         self.client_id = client_id
         self.reqId = 1
         self.status = 'DISCONNECTED'
-        self.keep_alive = False
+        self.keep_alive = True
 
         # Dict which relates contract ids with the req id used for retrieval
         self.reqId_ticker = {}
@@ -69,7 +70,7 @@ class IB_API(Thread):
             self.connection.connect()
             self.status = 'CONNECTED'
             # Check input messages
-            while(self.keep_alive or self.status != 'IDLE'):
+            while(self.keep_alive):
                 while not self.input_queue.empty():
                     # Extract message from queue and process it
                     self._process_message(self.input_queue.get())
@@ -82,6 +83,7 @@ class IB_API(Thread):
             self.stop()
 
     def stop(self):
+        self.keep_alive = False
         self.disconnect()
         self.sender_thread.__stop = True
         self.__stop = True
@@ -127,6 +129,12 @@ class IB_API(Thread):
         elif msg.typeName == 'nextValidId':
             logging.info('Next valid order id: ' + str(msg.orderId))
             self.reqId = msg.orderId
+            if msg.orderId == 1:
+                # Clear contract dicts
+                self.reqId_ticker = {}
+                self.opt_chain = MultiDict()
+                self.stk_data = MultiDict()
+                self.contracts = []
         elif msg.typeName == 'updateAccountTime':
             pass  # TODO UNIMPLEMENTED
         elif msg.typeName == 'updateAccountValue':
@@ -170,6 +178,7 @@ class IB_API(Thread):
                 if not self.subscriptions:
                     self.status = 'IDLE'
                     logging.info('IB connection status set to IDLE')
+                    self.event.set()
         elif msg.typeName == 'currentTime':
             logging.info('Current server time: ' + str(msg.time))
         elif msg.typeName == 'execDetails':
@@ -408,6 +417,11 @@ class IB_API(Thread):
                     # from the list of requested ids
                     if req_id in self.reqId_ticker.keys():
                         del self.reqId_ticker[req_id]
+                    # Check if there is any pending job
+                    if not self.subscriptions and not self.reqId_ticker:
+                        self.status = 'IDLE'
+                        logging.info('IB connection status set to IDLE')
+                        self.event.set()
                 elif msgType == 'reqStkHistoricalVol':  # TODO Under test
                     self.connection.reqMktData(
                         req_id, contract, '104', snapshot=False)

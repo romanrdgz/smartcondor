@@ -3,6 +3,7 @@ import pymongo
 from datetime import datetime
 from argparse import ArgumentParser
 import smtplib
+import threading
 import traceback
 
 
@@ -65,7 +66,9 @@ if __name__ == "__main__":
                         help='Uses an excel file as output')
     parser.add_argument('-m', '--mongo', type=str,
                         help='Stores output data in given MongoDB database')
-    parser.add_argument('-e', '--emailpass', type=str,
+    parser.add_argument('-e', '--toaddr', type=str,
+                        help='E-mail where error alarms are sent to')
+    parser.add_argument('-p', '--emailpass', type=str,
                         help='E-mail account password for error alarms')
 
     args = parser.parse_args()
@@ -79,11 +82,11 @@ if __name__ == "__main__":
         # asking the IB server for any data
         if args.mongo and not check_mongo_server_is_on():
             # Send e-mail alert
-            from_addr = 'romanrdgz@gmail.com'
-            to_addr = 'romanrdgz@gmail.com'
-            msg = 'MongoDB server offline'
-            send_email_alert(from_addr, to_addr, args.emailpass, msg)
-            quit()
+            if args.toaddr and args.emailpass:
+                from_addr = 'smartcondor@gmail.com'
+                msg = 'MongoDB server offline'
+                send_email_alert(from_addr, args.toaddr, args.emailpass, msg)
+                quit()
 
         # Data will be loaded from Interactive Brokers server
         from ib_api import IB_API
@@ -93,11 +96,12 @@ if __name__ == "__main__":
         try:
             client_id = 0
             ib = None
+            event = threading.Event()
             # Try connecting with secuential client_id values until using
             # one free id
             while True:
                 try:
-                    ib = IB_API(client_id=client_id)
+                    ib = IB_API(client_id=client_id, event=event)
                     ib.start()
                     sleep(1)
                     if ib.thread_exception_msg:
@@ -109,10 +113,12 @@ if __name__ == "__main__":
                     break
 
             ib.get_option_contracts(args.tickers)
-            ib.join()  # Wait for the IB thread to finish
+            event.wait()  # Wait for the IB thread to finish
+            event.clear()
             for ticker in args.tickers:
                 ib.get_stock_implied_volatility(ticker, True)
-                ib.join()
+                event.wait()
+                event.clear()
 
             if(len(ib.opt_chain) == 0):
                 print('Error, zero contracts retrieved')
@@ -173,12 +179,11 @@ if __name__ == "__main__":
         except Exception, e:
             traceback.print_exc()
             print 'ERROR in IB_API: ' + str(e)
-            if args.emailpass:
+            if args.emailpass and args.toaddr:
                 # Send e-mail report
-                from_addr = 'romanrdgz@gmail.com'
-                to_addr = 'romanrdgz@gmail.com'
+                from_addr = 'smartcondor@gmail.com'
                 msg = 'Smartcondor auto data downloader error'
-                send_email_alert(from_addr, to_addr, args.emailpass, msg)
+                send_email_alert(from_addr, args.toaddr, args.emailpass, msg)
         finally:
             ib.stop()
             quit()
