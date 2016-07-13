@@ -1,9 +1,11 @@
+from argparse import ArgumentParser
+from datetime import datetime
+from ib_api import IB_API
 import pandas as pd
 import pymongo
-from datetime import datetime
-from argparse import ArgumentParser
 import smtplib
 import threading
+from time import sleep
 import traceback
 
 
@@ -86,11 +88,7 @@ if __name__ == "__main__":
                 from_addr = 'smartcondor@gmail.com'
                 msg = 'MongoDB server offline'
                 send_email_alert(from_addr, args.toaddr, args.emailpass, msg)
-                quit()
-
-        # Data will be loaded from Interactive Brokers server
-        from ib_api import IB_API
-        from time import sleep
+                raise SystemExit
 
         # Connection thread
         try:
@@ -104,14 +102,15 @@ if __name__ == "__main__":
                     ib = IB_API(client_id=client_id, event=event)
                     ib.start()
                     sleep(1)
+                    # Check if client_id is currently in use
                     if ib.thread_exception_msg:
                         client_id += 1
-                        continue
-                    break
+                    else:
+                        break
                 except Exception, e:
-                    print e
-                    break
+                    print('Error while connecting to IB API: ' + str(e))
 
+            # Connected!
             ib.get_option_contracts(args.tickers)
             event.wait()  # Wait for the IB thread to finish
             event.clear()
@@ -186,4 +185,4 @@ if __name__ == "__main__":
                 send_email_alert(from_addr, args.toaddr, args.emailpass, msg)
         finally:
             ib.stop()
-            quit()
+            raise SystemExit

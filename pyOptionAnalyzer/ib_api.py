@@ -173,24 +173,36 @@ class IB_API(Thread):
                          str(msg_reqId) + '. Still pending ' +
                          str(len(self.reqId_ticker)))
             # Check if all the expected data has arrived
-            if not self.reqId_ticker:
-                logging.info('All requested market data has arrived')
-                if not self.subscriptions:
-                    self.status = 'IDLE'
-                    logging.info('IB connection status set to IDLE')
-                    self.event.set()
+            self.check_if_all_data_arrived()
         elif msg.typeName == 'currentTime':
             logging.info('Current server time: ' + str(msg.time))
         elif msg.typeName == 'execDetails':
             logging.info('Received execDetails for reqId ' + str(msg_reqId))
         elif msg.typeName == 'error':
             logging.error(str(msg.errorCode) + ' - ' + str(msg.errorMsg))
-            if msg.errorCode == 326:
+            if msg.errorCode == 200:
+                # Requested contract is ambiguous, remove from req_Id List
+                if msg_reqId in self.reqId_ticker.keys():
+                    del self.reqId_ticker[msg_reqId]
+                # Check if all the expected data has arrived
+                self.check_if_all_data_arrived()
+            elif msg.errorCode == 326:
                 # ClientId in use, raise exception and reconnect with different
                 # id
                 self.thread_exception_msg = msg.errorMsg
         elif msg.typeName == 'connectionClosed':
             logging.info('Connection has been closed')
+
+    def check_if_all_data_arrived(self):
+        '''
+        This method checks if all the expected data has arrived
+        '''
+        if not self.reqId_ticker:
+            logging.info('All requested market data has arrived')
+            if not self.subscriptions:
+                self.status = 'IDLE'
+                logging.info('IB connection status set to IDLE')
+                self.event.set()
 
     def _parse_tickPrice(self, msg):
         '''
