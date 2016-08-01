@@ -40,15 +40,15 @@ The risk graph of these option strategies can be obtained as the sum of each com
  - Req #13: Users shall be able to save the strategy
  - Req #14: Users shall view a dashboard where they can choose between creating a new strategy, exploring saved strategies, or other posible services to be determined (alerts, implied volatility studies, algorithmic trading...)
  - Req #15: Users shall be able to share any strategy risk graph in social networks
-- Req #16: Risk graph shall be calculated using Black-Scholes method
-- Req #17: Heavy calculations shall be performed at client's browser
-- Req #18: Users shall be able to publish their strategies at SmartCondor public strategies, or to keep them private
-- Req #19: Registered users shall be able to comment on public strategies
-- Req #20: Users shall get a notification when somebody comments on their own strategies or answers to their own comments
-- Req #21: Users shall be able to explore the evolution of implied volatility for any available underlying
-- Req #22: Users shall be able to explore 3D volatility surfaces for any available underlying
-- Req #23: Users shall be able to create alarms for option strategies and receive a notification when the alarm is triggered
-- Req #24: Market data shall be automatically updated from a data source to be determined
+ - Req #16: Risk graph shall be calculated using Black-Scholes method
+ - Req #17: Heavy calculations shall be performed at client's browser
+ - Req #18: Users shall be able to publish their strategies at SmartCondor public strategies, or to keep them private
+ - Req #19: Registered users shall be able to comment on public strategies
+ - Req #20: Users shall get a notification when somebody comments on their own strategies or answers to their own comments
+ - Req #21: Users shall be able to explore the evolution of implied volatility for any available underlying
+ - Req #22: Users shall be able to explore 3D volatility surfaces for any available underlying
+ - Req #23: Users shall be able to create alarms for option strategies and receive a notification when the alarm is triggered
+ - Req #24: Market data shall be automatically updated from a data source to be determined
 
 ### Interfaces and tech
 
